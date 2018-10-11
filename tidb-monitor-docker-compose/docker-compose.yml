@@ -1,0 +1,44 @@
+version: '2.1'
+
+services:
+  pushgateway:
+    image: prom/pushgateway:v0.3.1
+    ports:
+        - "9091:9091"
+    command:
+    - --log.level=error
+    restart: on-failure
+  prometheus:
+    user: root
+    image: prom/prometheus:v2.2.1
+    command:
+      - --log.level=error
+      - --storage.tsdb.path=/data/prometheus
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/pd.rules.yml:/etc/prometheus/pd.rules.yml:ro
+      - ./config/tikv.rules.yml:/etc/prometheus/tikv.rules.yml:ro
+      - ./config/tidb.rules.yml:/etc/prometheus/tidb.rules.yml:ro
+      - ./data:/data
+    restart: on-failure
+  grafana:
+    image: grafana/grafana:4.6.3
+    environment:
+      GF_LOG_LEVEL: error
+    ports:
+      - "3000:3000"
+    restart: on-failure
+  dashboard-installer:
+    image: pingcap/tidb-dashboard-installer:v2.0.0
+    command: ["grafana:3000"]
+    volumes:
+      - ./config/grafana-datasource.json:/datasource.json:ro
+      - ./config/pd-dashboard.json:/pd.json:ro
+      - ./config/tikv-dashboard.json:/tikv.json:ro
+      - ./config/tidb-dashboard.json:/tidb.json:ro
+      - ./config/overview-dashboard.json:/overview.json:ro
+    restart: on-failure
+
